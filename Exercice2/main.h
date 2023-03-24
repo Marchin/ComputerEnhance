@@ -17,8 +17,8 @@ typedef double f64;
 
 struct Buffer {
     void* ptr;
-    int currSize;
-    int maxSize;
+    size_t currSize;
+    size_t maxSize;
 };
 
 #define MAIN_H

@@ -87,7 +87,7 @@ void getShortRegName(Buffer* pBuffer, int rm) {
     }
 }
 
-void getEffectiveAddress(Buffer* pBuffer, int rm, int mod, int lowDisp, int highDisp) {
+void getEffectiveAddress(Buffer* pBuffer, int rm, int mod, s8 lowDisp, s8 highDisp) {
     char* ptr = (char*)pBuffer->ptr + pBuffer->currSize;
     
     switch (rm) {
@@ -117,9 +117,10 @@ void getEffectiveAddress(Buffer* pBuffer, int rm, int mod, int lowDisp, int high
         } break;
         case 0b110: {
             if (mod == 0) {
-                int value = (highDisp << 8) + lowDisp;
-                char instrBase[6];
-                _itoa_s(value, instrBase, 10);
+                s16 value = (highDisp << 8) + lowDisp;
+                char instrBase[6 + 1];
+                instrBase[0] = '[';
+                _itoa_s(value, instrBase + 1, sizeof(instrBase), 10);
                 pushText(pBuffer, instrBase, strlen(instrBase));
             } else {
                 char instrBase[] = "[bp";
@@ -135,19 +136,35 @@ void getEffectiveAddress(Buffer* pBuffer, int rm, int mod, int lowDisp, int high
     if (lowDisp || highDisp) {
         switch (mod) {
             case 0b01: {
-                char add[] = " + ";
-                pushText(pBuffer, add, strlen(add));
-                char instrBase[6];
-                _itoa_s(lowDisp, instrBase, 10);
-                pushText(pBuffer, instrBase, strlen(instrBase));
+                if ((lowDisp >> 7) & 1) {
+                    char op[] = " - ";
+                    pushText(pBuffer, op, strlen(op));
+                    char instrBase[6];
+                    _itoa_s(~lowDisp + 1, instrBase, 10);
+                    pushText(pBuffer, instrBase, strlen(instrBase));
+                } else {
+                    char op[] = " + ";
+                    pushText(pBuffer, op, strlen(op));
+                    char instrBase[6];
+                    _itoa_s(lowDisp, instrBase, 10);
+                    pushText(pBuffer, instrBase, strlen(instrBase));
+                }
             } break;
             case 0b10: {
-                char add[] = " + ";
-                pushText(pBuffer, add, strlen(add));
-                int value = (highDisp << 8) + lowDisp;
-                char instrBase[6];
-                _itoa_s(value, instrBase, 10);
-                pushText(pBuffer, instrBase, strlen(instrBase));
+                s16 value = ((highDisp) << 7) + lowDisp;
+                if ((value >> 15) & 1) {
+                    char op[] = " - ";
+                    pushText(pBuffer, op, strlen(op));
+                    char instrBase[6];
+                    _itoa_s(~value + 1, instrBase, 10);
+                    pushText(pBuffer, instrBase, strlen(instrBase));
+                } else {
+                    char op[] = " + ";
+                    pushText(pBuffer, op, strlen(op));
+                    char instrBase[6];
+                    _itoa_s(value, instrBase, 10);
+                    pushText(pBuffer, instrBase, strlen(instrBase));
+                }
             } break;
         }
     }
@@ -299,9 +316,9 @@ int main(int argc, char** argv) {
                     
                     u8 data[2];
                     fread_s(&data, sizeof(data), sizeof(u8), 2, pFileRead);
-                    int value = (data[1] << 8) + data[0];
+                    int value = (data[1] << 7) + data[0];
                     char instrBase[6];
-                    _itoa_s(value, instrBase, 10);
+                    _itoa_s((s16)value, instrBase, 10);
                     pushText(&buffer, instrBase, strlen(instrBase));
                 } else {
                     getShortRegName(&buffer, reg);
@@ -311,13 +328,13 @@ int main(int argc, char** argv) {
                     
                     fread_s(&tempBuffer, sizeof(tempBuffer), sizeof(u8), 1, pFileRead);
                     char instrBase[6];
-                    _itoa_s(tempBuffer, instrBase, 10);
+                    _itoa_s((s8)tempBuffer, instrBase, 10);
                     pushText(&buffer, instrBase, strlen(instrBase));
                 }
             } else if ((tempBuffer >> 1) == IRmMov) {
                 char mov[] = "\nmov ";
                 pushText(&buffer, mov, strlen(mov));
-                bool wBit = (tempBuffer >> 1) & 0b1;
+                bool wBit = tempBuffer & 1;
                 
                 fread_s(&tempBuffer, sizeof(tempBuffer), sizeof(u8), 1, pFileRead);
                 int mod = tempBuffer >> 6;
@@ -331,7 +348,7 @@ int main(int argc, char** argv) {
                     pushText(&buffer, comma, strlen(comma));
                     
                     fread_s(&data, sizeof(data), sizeof(u8), 2, pFileRead);
-                    int value = (data[1] << 8) + data[0];
+                    int value = (data[1] << 7) + data[0];
                     char instrBase[6];
                     _itoa_s(value, instrBase, 10);
                     pushText(&buffer, instrBase, strlen(instrBase));

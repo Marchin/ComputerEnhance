@@ -21,5 +21,7 @@ struct Buffer {
     size_t maxSize;
 };
 
+#define MAX_CHAR_16 7
+
 #define MAIN_H
 #endif //MAIN_H

@@ -389,16 +389,13 @@ int main(int argc, char** argv) {
                 pushText(&buffer, mov, strlen(mov));
                 
                 bool wBit = tempBuffer & 1;
+                
                 if (wBit) {
                     getWideRegName(&buffer, 0);
-                } else {
-                    getShortRegName(&buffer, 0);
-                }
-                
-                char comma[] = ", ";
-                pushText(&buffer, comma, strlen(comma));
-                
-                if (wBit) {
+                    
+                    char comma[] = ", ";
+                    pushText(&buffer, comma, strlen(comma));
+                    
                     u8 data[2];
                     fread_s(&data, sizeof(data), sizeof(u8), 2, pFileRead);
                     int value = (data[1] << 8) + data[0];
@@ -407,6 +404,11 @@ int main(int argc, char** argv) {
                     _itoa_s(value, instrBase + 1, sizeof(instrBase) - 1, 10);
                     pushText(&buffer, instrBase, strlen(instrBase));
                 } else {
+                    getShortRegName(&buffer, 0);
+                    
+                    char comma[] = ", ";
+                    pushText(&buffer, comma, strlen(comma));
+                    
                     fread_s(&tempBuffer, sizeof(tempBuffer), sizeof(u8), 1, pFileRead);
                     char instrBase[MAX_CHAR_16 + 1];
                     instrBase[0] = '[';

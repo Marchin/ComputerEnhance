@@ -118,9 +118,9 @@ void getEffectiveAddress(Buffer* pBuffer, int rm, int mod, u8 lowDisp, u8 highDi
         case 0b110: {
             if (mod == 0) {
                 s16 value = (highDisp << 8) + lowDisp;
-                char instrBase[6 + 1];
+                char instrBase[MAX_CHAR_16 + 1];
                 instrBase[0] = '[';
-                _itoa_s(value, instrBase + 1, sizeof(instrBase), 10);
+                _itoa_s(value, instrBase + 1, sizeof(instrBase) - 1, 10);
                 pushText(pBuffer, instrBase, strlen(instrBase));
             } else {
                 char instrBase[] = "[bp";
@@ -177,6 +177,8 @@ int main(int argc, char** argv) {
     const int RmRMov = 0b00100010;
     const int IRmMov = 0b01100011;
     const int IRMov = 0b00001011;
+    const int MemAccMov = 0b01010000;
+    const int AccMemMov = 0b01010001;
     const int rmMask = 0b00000111;
     // TODO(Marchin): immediate mode
     FILE* pFileRead;
@@ -382,6 +384,37 @@ int main(int argc, char** argv) {
                     _itoa_s(tempBuffer, instrBase, 10);
                     pushText(&buffer, instrBase, strlen(instrBase));
                 }
+            } else if ((tempBuffer >> 1) == MemAccMov) {
+                char mov[] = "\nmov ";
+                pushText(&buffer, mov, strlen(mov));
+                
+                bool wBit = tempBuffer & 1;
+                if (wBit) {
+                    getWideRegName(&buffer, 0);
+                } else {
+                    getShortRegName(&buffer, 0);
+                }
+                
+                char comma[] = ", ";
+                pushText(&buffer, comma, strlen(comma));
+                
+                if (wBit) {
+                    u8 data[2];
+                    fread_s(&data, sizeof(data), sizeof(u8), 2, pFileRead);
+                    int value = (data[1] << 8) + data[0];
+                    char instrBase[MAX_CHAR_16 + 1];
+                    instrBase[0] = '[';
+                    _itoa_s(value, instrBase + 1, sizeof(instrBase) - 1, 10);
+                    pushText(&buffer, instrBase, strlen(instrBase));
+                } else {
+                    fread_s(&tempBuffer, sizeof(tempBuffer), sizeof(u8), 1, pFileRead);
+                    char instrBase[MAX_CHAR_16 + 1];
+                    instrBase[0] = '[';
+                    _itoa_s(tempBuffer, instrBase + 1, sizeof(instrBase) - 1, 10);
+                    pushText(&buffer, instrBase, strlen(instrBase));
+                }
+                
+                pushText(&buffer, "]", 1);
             }
             
             ((char*)buffer.ptr)[buffer.currSize] = 0;

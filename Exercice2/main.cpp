@@ -368,11 +368,15 @@ int main(int argc, char** argv) {
                 if (wBit) {
                     u8 data[2];
                     fread_s(&data, sizeof(data), sizeof(u8), 2, pFileRead);
+                    char wordText[] = "word ";
+                    pushText(&buffer, wordText, strlen(wordText));
                     int value = (data[1] << 8) + data[0];
                     char instrBase[MAX_CHAR_16];
                     _itoa_s(value, instrBase, 10);
                     pushText(&buffer, instrBase, strlen(instrBase));
                 } else {
+                    char byteText[] = "byte ";
+                    pushText(&buffer, byteText, strlen(byteText));
                     fread_s(&tempBuffer, sizeof(tempBuffer), sizeof(u8), 1, pFileRead);
                     char instrBase[MAX_CHAR_16];
                     _itoa_s(tempBuffer, instrBase, 10);

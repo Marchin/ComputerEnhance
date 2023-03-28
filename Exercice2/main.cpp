@@ -196,10 +196,11 @@ int main(int argc, char** argv) {
         buffer.ptr = malloc(buffer.maxSize);
         int instr = 0;
         printf("bits 16\n");
-        while (!feof(pFileRead)) {
-            u8 tempBuffer;
+        u8 tempBuffer;
+        
+        while (fread_s(&tempBuffer, sizeof(tempBuffer), sizeof(u8), 1, pFileRead) > 0) {
             instr++;
-            fread_s(&tempBuffer, sizeof(tempBuffer), sizeof(u8), 1, pFileRead);
+            
             if ((tempBuffer >> 2) == RmRMov) {
                 char mov[] = "\nmov ";
                 pushText(&buffer, mov, strlen(mov));
@@ -372,7 +373,7 @@ int main(int argc, char** argv) {
                     fread_s(&data, sizeof(data), sizeof(u8), 2, pFileRead);
                     char wordText[] = "word ";
                     pushText(&buffer, wordText, strlen(wordText));
-                    int value = (data[1] << 8) + data[0];
+                    s16 value = (data[1] << 8) + data[0];
                     char instrBase[MAX_CHAR_16];
                     _itoa_s(value, instrBase, 10);
                     pushText(&buffer, instrBase, strlen(instrBase));
@@ -398,7 +399,7 @@ int main(int argc, char** argv) {
                     
                     u8 data[2];
                     fread_s(&data, sizeof(data), sizeof(u8), 2, pFileRead);
-                    int value = (data[1] << 8) + data[0];
+                    s16 value = (data[1] << 8) + data[0];
                     char instrBase[MAX_CHAR_16 + 1];
                     instrBase[0] = '[';
                     _itoa_s(value, instrBase + 1, sizeof(instrBase) - 1, 10);
@@ -417,6 +418,39 @@ int main(int argc, char** argv) {
                 }
                 
                 pushText(&buffer, "]", 1);
+            } else if ((tempBuffer >> 1) == AccMemMov) {
+                char mov[] = "\nmov ";
+                pushText(&buffer, mov, strlen(mov));
+                
+                bool wBit = tempBuffer & 1;
+                
+                if (wBit) {
+                    u8 data[2];
+                    size_t a = fread_s(&data, sizeof(data), sizeof(u8), 2, pFileRead);
+                    s16 value = (data[1] << 8) + data[0];
+                    char instrBase[MAX_CHAR_16 + 1];
+                    instrBase[0] = '[';
+                    _itoa_s(value, instrBase + 1, sizeof(instrBase) - 1, 10);
+                    pushText(&buffer, instrBase, strlen(instrBase));
+                    pushText(&buffer, "]", 1);
+                    
+                    char comma[] = ", ";
+                    pushText(&buffer, comma, strlen(comma));
+                    
+                    getWideRegName(&buffer, 0);
+                } else {
+                    fread_s(&tempBuffer, sizeof(tempBuffer), sizeof(u8), 1, pFileRead);
+                    char instrBase[MAX_CHAR_16 + 1];
+                    instrBase[0] = '[';
+                    _itoa_s(tempBuffer, instrBase + 1, sizeof(instrBase) - 1, 10);
+                    pushText(&buffer, instrBase, strlen(instrBase));
+                    pushText(&buffer, "]", 1);
+                    
+                    char comma[] = ", ";
+                    pushText(&buffer, comma, strlen(comma));
+                    
+                    getShortRegName(&buffer, 0);
+                }
             }
             
             ((char*)buffer.ptr)[buffer.currSize] = 0;

@@ -10,6 +10,23 @@ void pushText(Buffer* pBuffer, char* text, size_t textLength) {
     strncpy_s(ptr, bufferSize, text, bufferSize);
 }
 
+void getOp(Buffer* pBuffer, int op) {
+    switch (op) {
+        case 0b000: {
+            char instrBase[] = "\nadd ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+        } break;
+        case 0b101: {
+            char instrBase[] = "\nsub ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+        } break;
+        case 0b111: {
+            char instrBase[] = "\ncmp ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+        } break;
+    }
+}
+
 void getWideRegName(Buffer* pBuffer, int rm) {
     switch (rm) {
         case 0b00000000: {
@@ -179,6 +196,13 @@ int main(int argc, char** argv) {
     const int IRMov = 0b00001011;
     const int MemAccMov = 0b01010000;
     const int AccMemMov = 0b01010001;
+    const int RmROp = 0b00000000;
+    const int IRmOp = 0b00100000;
+    const int IAccOp = 0b00000010;
+    const int OpAdd = 0b000;
+    const int OpSub = 0b101;
+    const int OpCmp = 0b111;
+    const int OpMaskClear = 0b11000111;
     const int rmMask = 0b00000111;
     FILE* pFileRead;
     
@@ -200,9 +224,18 @@ int main(int argc, char** argv) {
         while (fread_s(&tempBuffer, sizeof(tempBuffer), sizeof(u8), 1, pFileRead) > 0) {
             instr++;
             
-            if ((tempBuffer >> 2) == RmRMov) {
-                char mov[] = "\nmov ";
-                pushText(&buffer, mov, strlen(mov));
+            int opMaskedBufferOffset2 = (tempBuffer & OpMaskClear) >> 2;
+            bool isRmRMov = tempBuffer >> 2 == RmRMov;
+            int op = (tempBuffer & ~opMaskedBufferOffset2) >> 3;
+            bool isOP = (op == 0b000) || (op == 0b101) || (op == 0b111);
+            if (isRmRMov || (isOP && (opMaskedBufferOffset2 == RmROp))) {
+                if (isOP) {
+                    getOp(&buffer, (tempBuffer & ~OpMaskClear) >> 3);
+                } else {
+                    char mov[] = "\nmov ";
+                    pushText(&buffer, mov, strlen(mov));
+                }
+                
                 bool wBit = tempBuffer & 0b1;
                 bool dBit = tempBuffer & 0b10;
                 fread_s(&tempBuffer, sizeof(tempBuffer), sizeof(u8), 1, pFileRead);
@@ -333,13 +366,19 @@ int main(int argc, char** argv) {
                     _itoa_s((s8)tempBuffer, instrBase, 10);
                     pushText(&buffer, instrBase, strlen(instrBase));
                 }
-            } else if ((tempBuffer >> 1) == IRmMov) {
-                char mov[] = "\nmov ";
-                pushText(&buffer, mov, strlen(mov));
+            } else if (((tempBuffer >> 1) == IRmMov) || ((isOP && (opMaskedBufferOffset2 == IRmOp)))) {
                 bool wBit = tempBuffer & 1;
+                bool sBit = (opMaskedBufferOffset2 == IRmOp) && (tempBuffer & 0b10);
                 
                 fread_s(&tempBuffer, sizeof(tempBuffer), sizeof(u8), 1, pFileRead);
                 int mod = tempBuffer >> 6;
+                
+                if (isOP) {
+                    getOp(&buffer, (tempBuffer & 0b00111000) >> 3);
+                } else {
+                    char mov[] = "\nmov ";
+                    pushText(&buffer, mov, strlen(mov));
+                }
                 
                 switch (mod) {
                     case 0b00: {
@@ -367,7 +406,7 @@ int main(int argc, char** argv) {
                 char comma[] = ", ";
                 pushText(&buffer, comma, strlen(comma));
                 
-                if (wBit) {
+                if (wBit && !sBit) {
                     u8 data[2];
                     fread_s(&data, sizeof(data), sizeof(u8), 2, pFileRead);
                     char wordText[] = "word ";
@@ -377,8 +416,10 @@ int main(int argc, char** argv) {
                     _itoa_s(value, instrBase, 10);
                     pushText(&buffer, instrBase, strlen(instrBase));
                 } else {
-                    char byteText[] = "byte ";
-                    pushText(&buffer, byteText, strlen(byteText));
+                    if (!sBit) {
+                        char byteText[] = "byte ";
+                        pushText(&buffer, byteText, strlen(byteText));
+                    }
                     fread_s(&tempBuffer, sizeof(tempBuffer), sizeof(u8), 1, pFileRead);
                     char instrBase[MAX_CHAR_16];
                     _itoa_s(tempBuffer, instrBase, 10);

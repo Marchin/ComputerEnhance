@@ -226,7 +226,7 @@ int main(int argc, char** argv) {
             
             int opMaskedBufferOffset2 = (tempBuffer & OpMaskClear) >> 2;
             bool isRmRMov = tempBuffer >> 2 == RmRMov;
-            int op = (tempBuffer & ~opMaskedBufferOffset2) >> 3;
+            int op = (tempBuffer & ~OpMaskClear) >> 3;
             bool isOP = (op == 0b000) || (op == 0b101) || (op == 0b111);
             if (isRmRMov || (isOP && (opMaskedBufferOffset2 == RmROp))) {
                 if (isOP) {

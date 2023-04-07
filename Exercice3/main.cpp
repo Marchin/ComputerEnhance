@@ -337,11 +337,16 @@ int main(int argc, char** argv) {
                         }
                     } break;
                 }
-            } else if ((tempBuffer >> 4) == IRMov) {
-                char mov[] = "\nmov ";
-                pushText(&buffer, mov, strlen(mov));
+            } else if (((tempBuffer >> 4) == IRMov) || (isOP && ((tempBuffer >> 1) == IAccOp))) {
+                if (isOP) {
+                    getOp(&buffer, (tempBuffer & ~OpMaskClear) >> 3);
+                } else {
+                    char mov[] = "\nmov ";
+                    pushText(&buffer, mov, strlen(mov));
+                }
+                
                 bool wBit = (tempBuffer >> 3) & 0b1;
-                int reg = tempBuffer & 0b111;
+                int reg = isOP ? 0 : (tempBuffer & 0b111);
                 
                 if (wBit) {
                     getWideRegName(&buffer, reg);

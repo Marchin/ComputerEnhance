@@ -345,7 +345,7 @@ int main(int argc, char** argv) {
                     pushText(&buffer, mov, strlen(mov));
                 }
                 
-                bool wBit = (tempBuffer >> 3) & 0b1;
+                bool wBit = isOP ? (tempBuffer & 1) : ((tempBuffer >> 3) & 0b1);
                 int reg = isOP ? 0 : (tempBuffer & 0b111);
                 
                 if (wBit) {
@@ -380,6 +380,16 @@ int main(int argc, char** argv) {
                 
                 if (isOP) {
                     getOp(&buffer, (tempBuffer & 0b00111000) >> 3);
+                    
+                    if (mod != 0b11) {
+                        if (wBit && !sBit) {
+                            char wordText[] = "word ";
+                            pushText(&buffer, wordText, strlen(wordText));
+                        } else {
+                            char byteText[] = "byte ";
+                            pushText(&buffer, byteText, strlen(byteText));
+                        }
+                    }
                 } else {
                     char mov[] = "\nmov ";
                     pushText(&buffer, mov, strlen(mov));
@@ -414,14 +424,18 @@ int main(int argc, char** argv) {
                 if (wBit && !sBit) {
                     u8 data[2];
                     fread_s(&data, sizeof(data), sizeof(u8), 2, pFileRead);
-                    char wordText[] = "word ";
-                    pushText(&buffer, wordText, strlen(wordText));
+                    
+                    if (!isOP) {
+                        char wordText[] = "word ";
+                        pushText(&buffer, wordText, strlen(wordText));
+                    }
+                    
                     s16 value = (data[1] << 8) + data[0];
                     char instrBase[MAX_CHAR_16];
                     _itoa_s(value, instrBase, 10);
                     pushText(&buffer, instrBase, strlen(instrBase));
                 } else {
-                    if (!sBit) {
+                    if (!sBit && !isOP) {
                         char byteText[] = "byte ";
                         pushText(&buffer, byteText, strlen(byteText));
                     }

@@ -225,6 +225,7 @@ int main(int argc, char** argv) {
             instr++;
             
             int opMaskedBufferOffset2 = (tempBuffer & OpMaskClear) >> 2;
+            int opMaskedBufferOffset1 = (tempBuffer & OpMaskClear) >> 1;
             bool isRmRMov = tempBuffer >> 2 == RmRMov;
             int op = (tempBuffer & ~OpMaskClear) >> 3;
             bool isOP = (op == 0b000) || (op == 0b101) || (op == 0b111);
@@ -337,7 +338,7 @@ int main(int argc, char** argv) {
                         }
                     } break;
                 }
-            } else if (((tempBuffer >> 4) == IRMov) || (isOP && ((tempBuffer >> 1) == IAccOp))) {
+            } else if (((tempBuffer >> 4) == IRMov) || (isOP && (opMaskedBufferOffset1 == IAccOp))) {
                 if (isOP) {
                     getOp(&buffer, (tempBuffer & ~OpMaskClear) >> 3);
                 } else {
@@ -382,7 +383,7 @@ int main(int argc, char** argv) {
                     getOp(&buffer, (tempBuffer & 0b00111000) >> 3);
                     
                     if (mod != 0b11) {
-                        if (wBit && !sBit) {
+                        if (wBit) {
                             char wordText[] = "word ";
                             pushText(&buffer, wordText, strlen(wordText));
                         } else {

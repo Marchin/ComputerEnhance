@@ -398,7 +398,12 @@ int main(int argc, char** argv) {
                 
                 switch (mod) {
                     case 0b00: {
-                        getEffectiveAddress(&buffer, tempBuffer & rmMask, mod, 0, 0);
+                        u8 disp[2] = {};
+                        int rm = tempBuffer & rmMask;
+                        if (rm == 0b110) {
+                            fread_s(&disp, sizeof(disp), sizeof(u8), 2, pFileRead);
+                        }
+                        getEffectiveAddress(&buffer, rm, mod, disp[0], disp[1]);
                     } break;
                     case 0b01: {
                         u8 disp;

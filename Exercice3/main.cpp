@@ -189,6 +189,115 @@ void getEffectiveAddress(Buffer* pBuffer, int rm, int mod, u8 lowDisp, u8 highDi
     pushText(pBuffer, "]", 1);
 }
 
+bool getConditionalJump(Buffer* pBuffer, u8 instr) {
+    bool result = false;
+    
+    switch (instr) {
+        case 0b01110100: {
+            char instrBase[] = "\njz ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+            result = true;
+        } break;
+        case 0b01111100: {
+            char instrBase[] = "\njl ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+            result = true;
+        } break;
+        case 0b01111110: {
+            char instrBase[] = "\njle ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+            result = true;
+        } break;
+        case 0b01110010: {
+            char instrBase[] = "\njb ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+            result = true;
+        } break;
+        case 0b01110110: {
+            char instrBase[] = "\njbe ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+            result = true;
+        } break;
+        case 0b01111010: {
+            char instrBase[] = "\njp ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+            result = true;
+        } break;
+        case 0b01110000: {
+            char instrBase[] = "\njo ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+            result = true;
+        } break;
+        case 0b01111000: {
+            char instrBase[] = "\njs ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+            result = true;
+        } break;
+        case 0b01110101: {
+            char instrBase[] = "\njne ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+            result = true;
+        } break;
+        case 0b01111101: {
+            char instrBase[] = "\njnl ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+            result = true;
+        } break;
+        case 0b01111111: {
+            char instrBase[] = "\njnle ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+            result = true;
+        } break;
+        case 0b01110011: {
+            char instrBase[] = "\njnb ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+            result = true;
+        } break;
+        case 0b01110111: {
+            char instrBase[] = "\njnbe ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+            result = true;
+        } break;
+        case 0b01111011: {
+            char instrBase[] = "\njnp ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+            result = true;
+        } break;
+        case 0b01110001: {
+            char instrBase[] = "\njno ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+            result = true;
+        } break;
+        case 0b01111001: {
+            char instrBase[] = "\njns ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+            result = true;
+        } break;
+        case 0b11100010: {
+            char instrBase[] = "\nloop ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+            result = true;
+        } break;
+        case 0b11100001: {
+            char instrBase[] = "\nloopz ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+            result = true;
+        } break;
+        case 0b11100000: {
+            char instrBase[] = "\nloopnz ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+            result = true;
+        } break;
+        case 0b11100011: {
+            char instrBase[] = "\njcxz ";
+            pushText(pBuffer, instrBase, strlen(instrBase));
+            result = true;
+        } break;
+    }
+    
+    return result;
+}
+
 int main(int argc, char** argv) {
     // These intructions are displaced to move out the configurable bits.
     const int RmRMov = 0b00100010;
@@ -223,6 +332,19 @@ int main(int argc, char** argv) {
         
         while (fread_s(&tempBuffer, sizeof(tempBuffer), sizeof(u8), 1, pFileRead) > 0) {
             instr++;
+            
+            if (getConditionalJump(&buffer, tempBuffer)) {
+                s8 value;
+                fread_s(&value, sizeof(value), sizeof(s8), 1, pFileRead);
+                char instrBase[MAX_CHAR_16];
+                _itoa_s(value, instrBase, 10);
+                pushText(&buffer, instrBase, strlen(instrBase));
+                
+                ((char*)buffer.ptr)[buffer.currSize] = 0;
+                printf((char*)buffer.ptr);
+                buffer.currSize = 0;
+                continue;
+            }
             
             int opMaskedBufferOffset2 = (tempBuffer & OpMaskClear) >> 2;
             int opMaskedBufferOffset1 = (tempBuffer & OpMaskClear) >> 1;
